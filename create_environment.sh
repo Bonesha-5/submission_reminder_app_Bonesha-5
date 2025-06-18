@@ -1,14 +1,45 @@
 #!/bin/bash
 
 #prompting user to enter their username and creating a directory
+echo " "
 echo "You're going to enter username to be used"
-read -p "Enter username: " username
+echo "Here are the instructions:
+1. username must be not empty
+2. It must be exactly one word with no spaces
+............................................."
 
+#checking the name enteredby the user according to the instructions
+while true; do
+  read -p "Enter your username: " username
+
+  # Removing extra spaces
+  username=$(echo "$username" | xargs)
+
+  # Check if the input is empty
+  if [[ -z "$username" ]]; then
+    echo "Error: Username cannot be empty. Please try again."
+    continue
+  fi
+
+  # Check if username is exactly one word
+  word_count=$(echo "$username" | wc -w)
+  if [[ "$word_count" -ne 1 ]]; then
+    echo "Error: Use only one word with no spaces."
+    continue
+  fi
+
+  # If valid, break the loop and continue
+  echo "Congratulations! Username accepted: $username"
+  break
+done
+
+
+# Checking and creating submission_reminder_* directory
 if [ -d submission_reminder_$username ]; then
-	echo "Directory called submission_reminder_$username exist" 
+	echo "Folder called submission_reminder_$username exist" 
 else
-	echo "we are going to create submission_reminder_$username directory"
 	mkdir -p submission_reminder_$username
+	echo "Successfully created submission_reminder_$username folder"
 fi
 
 #we are going to create sub directories and files inside it
@@ -56,7 +87,8 @@ fi
 
   #This is the content of the file reminder.sh
 
-cat <<BOF >> app/reminder.sh
+chmod +x app/reminder.sh
+cat <<BOF > app/reminder.sh
 #!/bin/bash
 
 # Source environment variables and helper functions
@@ -76,7 +108,8 @@ BOF
 
   #These are the content of the file functions.sh
 
-cat <<BOF >>modules/functions.sh
+chmod +x modules/functions.sh
+cat <<BOF > modules/functions.sh
 #!/bin/bash
 
 # Function to read submissions file and output students who have not submitted
@@ -100,7 +133,7 @@ function check_submissions {
 BOF
 
   #This is the content of the file submissions.txt file
-cat <<BOF >> assets/submissions.txt
+cat <<BOF > assets/submissions.txt
 student, assignment, submission status, date_to_submission
 Chinemerem, Shell Navigation, not submitted, 4 days
 Chiagoziem, Git, submitted, 10 days
@@ -124,22 +157,27 @@ BOF
 
   #This is the content of thr file startup.sh
 chmod +x startup.sh
+cat <<'BOF' > startup.sh
 #!/bin/bash
-cat <<BOF >> ./startup.sh
-source /submission_reminder_app_Bonesha-5/submission_reminder_$username/config/config.env
+source ./config/config.env
 tail -n +2 "./assets/submissions.txt" | while IFS=',' read -r student assignment status days_to_submission
 do
-  student=\$(echo "\$student" | xargs)
-  assignment=\$(echo "\$assignment" | tr '[:upper:]' '[:lower:]' | xargs | sed 's/^"\(.*\)"$/\1/' )
-  status=\$(echo "\$status" | tr '[:upper:]' '[:lower:]' | xargs )
-  days_to_submission=\$(echo "\$days_to_submission" | xargs)
+  student=$(echo "$student" | xargs)
+  assignment=$(echo "$assignment" | tr '[:upper:]' '[:lower:]' | xargs | sed 's/^"\(.*\)"$/\1/')
+  status=$(echo "$status" | tr '[:upper:]' '[:lower:]' | xargs)
+  days_to_submission=$(echo "$days_to_submission" | xargs)
 
-  if [[ "\$status" == "not submitted" && "\$assignment" == "\$ASSIGNMENT" ]]; then
-    echo "Reminder: \$student, you have '\$assignment' assignment that is not submitted yet, due in \$days_to_submission!"
-  elif [[ "\$status" == "submitted" && "\$assignment" == "\$ASSIGNMENT" ]]; then
-    echo "\$student already submitted \$assignment assignment"
-
+  if [[ "$status" == "not submitted" && "$assignment" == "$(echo "$ASSIGNMENT" | tr '[:upper:]' '[:lower:]')" ]]; then
+    echo "⚠️⚠️ Reminder: $student has ‘$assignment’ assignment that is not submitted yet, due in $days_to_submission!"
+  elif [[ "$status" == "submitted" && "$assignment" == "$(echo "$ASSIGNMENT" | tr '[:upper:]' '[:lower:]')" ]]; then
+    echo "🎉🎉$student already submitted $assignment assignment"
   fi
 done
 
 BOF
+
+#Delegating the user how to use this application
+echo "......................................"
+echo "To run this app:
+./copilot_script.sh
+cd submission_reminder_$username && ./startup.sh"
